@@ -1,0 +1,23 @@
+{
+  "name": "genart",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+		"dev": "lite-server",
+		"serve": "serve"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+		"plugin-typescript": "^7.1.0",
+    "lite-server": "^2.3.0",
+		"typescript": "^2.5.3",
+		"systemjs-plugin-css": "^0.1.33",
+		"serve": "^5.1.4"
+  },
+  "dependencies": {
+    "systemjs": "^0.20.19"
+  }
+}

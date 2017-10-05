@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,minimal-ui">
+  <title>system demo(TypeScript)</title>
+</head>
+<body>
+  <div id="content"></div>
+  <script src="./node_modules/systemjs/dist/system.js"></script>
+  <script>
+    System.config({
+			baseURL: './src',
+      packages: {
+				"src": {
+					"defaultExtension": "ts",
+				},
+				"lsys": {
+					"defaultExtension": "ts",
+				},
+				"util": {
+					"defaultExtension": "ts",
+				},
+        "ts": {
+          "main": "lib/plugin.js"
+        },
+        "typescript": {
+          "main": "lib/typescript.js",
+          "meta": {
+            "lib/typescript.js": {
+              "exports": "ts"
+            }
+          }
+        }
+      },
+      map: {
+        "ts": "./node_modules/plugin-typescript",
+        "typescript": "./node_modules/typescript",
+        "css": './node_modules/systemjs-plugin-css/css.js'
+      },
+      transpiler: 'ts',
+      // or traceurOptions or typescriptOptions
+      typescriptOptions: {
+				module: "system",
+    	  noImplicitAny: true,
+       // tsconfig: "tsconfig.json"
+      },
+      meta: {
+        '*.css': {
+          loader: 'css'
+        }
+      }
+    });
+    System.import('index.ts');
+  </script>
+</body>
+</html>
