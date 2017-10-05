@@ -3,24 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,minimal-ui">
-  <title>system demo(TypeScript)</title>
+  <title>Genart DevMode</title>
 </head>
 <body>
   <div id="content"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.14/p5.min.js"></script>
   <script src="./node_modules/systemjs/dist/system.js"></script>
   <script>
+    let pkgs = ['lsys', 'util', 'src'];
+    let pkgObj = {};
+    pkgs.forEach(p => {
+      pkgObj[p] = {"defaultExtension": "ts"};
+    });
     System.config({
 			baseURL: './src',
       packages: {
-				"src": {
-					"defaultExtension": "ts",
-				},
-				"lsys": {
-					"defaultExtension": "ts",
-				},
-				"util": {
-					"defaultExtension": "ts",
-				},
+        ...pkgObj,
         "ts": {
           "main": "lib/plugin.js"
         },
@@ -35,7 +33,8 @@
       },
       map: {
         "ts": "./node_modules/plugin-typescript",
-        "typescript": "./node_modules/typescript",
+				"typescript": "./node_modules/typescript",
+				"lodash": "./node_modules/lodash/lodash.js",
         "css": './node_modules/systemjs-plugin-css/css.js'
       },
       transpiler: 'ts',
