@@ -1,6 +1,8 @@
 // This file was auto-generated. Please do not edit it.
 
 declare class p5 {
+
+  	constructor(...rest:any[])
     // Properties from p5
     
     // src/3d/3d_primitives.js

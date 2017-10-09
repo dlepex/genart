@@ -1,17 +1,20 @@
 
-import {assert, jsonStr, Opt} from "util/util"
+import {assert, jsonStr, Opt, illegalArgErr} from "util/util"
+import {traceFor} from "util/log"
 import _ from "lodash"
+
+const [trace, isTraceOn]  = traceFor("lsys")
 
 export type Term = {
 	type: string
 }
-
-export type RewriterFunc = (from: Term, ctx: RuleCtx, left?: Term, right?: Term) => Term[]
+export type NonFlatArray<T> = (T|T[])[]
+export type RewriterFunc = (from: Term, ctx: RuleCtx, left?: Term, right?: Term) => NonFlatArray<Term>
 export type FromWithCtx = [string[],string,string[]] // [[leftctx], from, [rightctx]]
 
 export interface RuleConf {
 	from: string | FromWithCtx
-	to: Term[] | RewriterFunc
+	to: NonFlatArray<Term> | RewriterFunc
 	priority?: number
 }
 
@@ -41,7 +44,7 @@ class RuleCtxImpl {
 	}
 }
 
-function isValidCtx(c: RuleCtxImpl, sgn: 1|-1, ll: Opt<string[]>, cl: Opt<Term>): boolean {
+function matchCtx(c: RuleCtxImpl, sgn: 1|-1, ll: Opt<string[]>, cl: Opt<Term>): boolean {
 	if (!ll || !ll.length) {
 		return true;
 	}
@@ -60,10 +63,8 @@ class Rule {
 	rr?: string[]
 	apply: RewriterFunc
 	order: number
-	conf: RuleConf
 
 	constructor(private c: RuleConf) {
-		this.conf = c
 		if (typeof c.from === 'string') {
 			this.requiresCtx = false
 			this.from = c.from
@@ -77,11 +78,14 @@ class Rule {
 			}
 			this.rr = c.from[2]
 			this.order = c.priority || (this.ll.length + this.rr.length);
+			if (_.isEmpty(this.ll) && _.isEmpty(this.rr)) {
+				this.requiresCtx = false
+			}
 		}
 		if (typeof c.to === 'function') {
 			this.apply = c.to
 		} else {
-			let arr: Term[] = c.to
+			let arr = c.to
 			this.apply = () => arr
 		}
 	}
@@ -89,10 +93,7 @@ class Rule {
 		if (!this.requiresCtx) {
 			return true
 		}
-		if (!isValidCtx(c, 1, this.rr, c.r)) {
-			return false;
-		}
-		if (!isValidCtx(c, -1, this.ll, c.l)) {
+		if (!matchCtx(c, 1, this.rr, c.r) || !matchCtx(c, -1, this.ll, c.l)) {
 			return false;
 		}
 		return true
@@ -107,20 +108,33 @@ class Rule {
 	}
 }
 
+export interface RuleSysConf {
+	rules: RuleConf[]
+	init?: Term[] // aka axiom, it's possible to call init() later.
+}
 
+export interface RuleSystem {
+	readonly state: Term[]
+	readonly step: number
 
-export class RuleSystem {
+	init(state: Term[]): void
+	next(): Term[]
+}
+
+export function ruleSystem(c: RuleSysConf): RuleSystem {
+	return new RuleSystemImpl(c);
+}
+
+class RuleSystemImpl {
 	private rmap: Map<string, Rule[]>
   state: Term[]
-  step: number
+	step: number
 
-	constructor(confList: RuleConf[]) {
+ constructor(conf: RuleSysConf) {
+		let ruleCfgs = conf.rules
+		let rules = ruleCfgs.map(c => new Rule(c))
 		this.rmap = new Map()
-		let p = new p5()
-		p.ellipse(1, 2, 200, 20)
-		let rl = confList.map(c => new Rule(c))
-
-		rl.forEach((rule, index) => {
+		rules.forEach((rule, index) => {
 			let from = rule.from
 			let list = this.rmap.get(from)
 			if (list) {
@@ -132,42 +146,51 @@ export class RuleSystem {
 				this.rmap.set(from, [rule])
 			}
 		})
+		this.rmap.forEach(rules => Rule.sort(rules))
+		trace("Created RuleSystem", this.rmap)
+		if (conf.init) {
+			this.init(conf.init)
+		}
 	}
 
 	init(state: Term[]) {
+		if (!state) throw illegalArgErr('state')
 		this.state = state;
 		this.step = 0
 	}
 
-	next() {
+	next(): Term[] {
 		let state = this.state
-		if (!state || state.length === 0) {
-			return
+		if (!state.length) {
+			return state
 		}
 		let newState: Term[] = []
-		let maxIndex  = this.state.length - 1
+		let maxIndex  = state.length - 1
 		let ctx = new RuleCtxImpl()
-		ctx.state = this.state;
+		ctx.state = state;
 		for (let index = 0; index <= maxIndex; ++index) {
 			let from = state[index]
-			assert(from != null, () => `Corrupted state: ${jsonStr(state)} idx: ${index} step: ${this.step}`)
+			if (!from) {
+				assert(false, `Corrupted state: ${jsonStr(state)} idx: ${index} step: ${this.step}`)
+			}
 			let rules = this.rmap.get(from.type)
-			let terms: Opt<Term[]>
+			let terms: Opt<NonFlatArray<Term>>
 			if (rules) {
-				let rule = rules[0] // fix me.
+				ctx.idx = index; ctx.l = state[index - 1]; ctx.r = state[index + 1]
+				let rule = rules.find(r => r.matches(ctx))
 				if (rule) {
-					if (rule.requiresCtx) {
-						ctx.idx = index
-						ctx.l = index > 0 ? state[index - 1] : undefined
-						ctx.r = index < maxIndex ? state[index + 1] : undefined
-					}
-					if (rule.matches(ctx)) {
-						terms = rule.apply(from, ctx, ctx.l, ctx.r)
-					}
+					if(isTraceOn) trace('Applying rule', rule, ctx, `at ${index} step: ${this.step}`)
+					terms = rule.apply(from, ctx, ctx.l, ctx.r)
 				}
 			}
 			if (terms) {
-				newState.push(...terms)
+				terms.forEach(t => {
+					if (!_.isArray(t)) {
+						newState.push(t)
+					} else {
+						newState.push(...t)
+					}
+				})
 			} else {
 				newState.push(from)
 			}

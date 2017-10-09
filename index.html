@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,minimal-ui">
-  <title>Genart DevMode</title>
+	<title>Genart DevMode</title>
+	<style> body{padding:0; margin:0;} </style>
 </head>
 <body>
-  <div id="content"></div>
+	<div id="content"></div>
+	<div id="drawingCanvas"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.14/p5.min.js"></script>
-  <script src="./node_modules/systemjs/dist/system.js"></script>
+	<script src="./node_modules/systemjs/dist/system.js"></script>
   <script>
-    let pkgs = ['lsys', 'util', 'src'];
+    let pkgs = ['lsys', 'util', 'src', 'cg'];
     let pkgObj = {};
     pkgs.forEach(p => {
       pkgObj[p] = {"defaultExtension": "ts"};
@@ -49,7 +51,11 @@
           loader: 'css'
         }
       }
-    });
+		});
+
+		GLOBAL_TRACE_CFG = {
+			lsys: 0
+		}
     System.import('index.ts');
   </script>
 </body>
