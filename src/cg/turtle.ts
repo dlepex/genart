@@ -2,19 +2,18 @@ import {Term} from "lsys/rules"
 import {Opt} from "util/util"
 import _ from "lodash"
 
+type Color = paper.Color
+
+interface Style {
+	penWidth: number;
+	penColor: paper.Color
+}
 
 export interface State {
 	x: number;
 	y: number;
-	angle: number; // in radians
-	penWidth: number; // line width (stroke)
-}
-
-export interface TurtleConf {
-	scale?: number
-	penWidthMult?: number // line width scale (multiplier)
-	x?: number
-	y?: number
+	angle: number; 
+	style: Style
 }
 
 export class Turtle {
@@ -24,7 +23,7 @@ export class Turtle {
 	lineWidthMult: number
 
 
-	constructor(private p:p5, c: TurtleConf) {
+	constructor(private p:p5, s: State) {
 		this.scale = c.scale || 1
 		this.lineWidthMult = c.penWidthMult || 1
 		this.state = {x: c.x||0, y: c.y||0, angle:0,penWidth:1}
